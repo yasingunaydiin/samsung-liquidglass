@@ -1,6 +1,8 @@
-# Clean TV Home for Samsung
+# Samsung Frosted Glass
 
-Your Samsung TV's home screen, rebuilt around what is actually on. The app you are on fills the screen with its newest shows. No ad row, no TV Plus, no root.
+An Apple TV-style home screen for my Samsung TV: the show's art full screen, a big clock with the weather, and a see-through dock with just the apps I use. No ad row, no TV Plus, no root.
+
+Built for a **Samsung UE55CU7172UXXH** (55", 2023 Crystal UHD, Tizen 9.0). A fork of [Clean TV Home for Samsung](https://github.com/thisizmsk-png/tv-home), which had four switchable looks; this fork replaces them with one.
 
 ## The home screen
 
@@ -15,7 +17,7 @@ Press Up for the top row: Samsung Home, and the Control Center button on the rig
 - **Your HDMI device is a tile.** A Fire TV stick or console shows up next to the apps, and selecting it switches input and wakes it over HDMI-CEC.
 - **Only the apps you use get a tile.** Netflix, YouTube and Apple TV (the `SHOWN` list in `app/js/system.js`); everything else stays installed and reachable from Samsung Home.
 - **An idle clock.** After 3 minutes without a key press, a big clock over the current show, with a new show every 30 seconds. Any key wakes it.
-- **Home comes back here.** The Home button on the remote opens TV Home, and Samsung Home is one press away in the top row.
+- **Home comes back here** (see Known issues). The Home button on the remote should reopen this screen, and Samsung Home is one press away in the top row.
 
 ## What it sends
 
@@ -25,30 +27,46 @@ Without a key, public-domain paintings from the Art Institute of Chicago (CC0) s
 
 ## Install
 
-Needs [AeroTizen's CLI](https://github.com/helalaou/AeroTizen) with signing certificates made for your TV, and Developer Mode on.
+Needs [AeroTizen's CLI](https://github.com/helalaou/AeroTizen) with signing certificates made for your TV, and Developer Mode on (on the TV: Apps, type 1 2 3 4 5, switch it on, enter your computer's IP, then restart the TV by holding the power button).
 
 ```sh
-aerotizen --tv <tv-ip> certs                  # once
+aerotizen --tv <tv-ip> certs                  # once: signs in to your Samsung account
 echo YOUR_KEY > ~/.config/tv-home/tmdb.key    # optional, a free TMDB "API Key" or "API Read Access Token"
 tools/install.sh <tv-ip>                      # build, sign, install and open
+```
+
+For the greeting and weather, create `app/js/me.js` (it is git-ignored, so it stays on your computer):
+
+```js
+window.TVHOME_ME = { name: 'Your name', place: 'Your city', lat: 52.37, lon: 4.90 };
 ```
 
 The install script copies the key into the build in `dist/` only; it is never committed. Only one launcher with a Home watcher should be installed at a time.
 
 ## Tested on
 
-Samsung UN65CU7000DXZA (2023), Tizen 8.0. Plain JavaScript and CSS with no build step. Other Tizen TVs are untested; open an issue if yours works or does not.
+- **Samsung UE55CU7172UXXH** (2023, European model), Tizen 9.0. This fork's home screen and Control Center run here.
+- The original project was tested on a Samsung UN65CU7000DXZA (2023), Tizen 8.0.
+
+Plain JavaScript and CSS with no build step. Other Tizen TVs are untested.
+
+## Known issues
+
+- **The Home button goes to Samsung Home** on the CU7172 (Tizen 9.0). The Home-button watcher runs, but it never sees the press; Samsung Home may open on top while the TV still reports this app as on screen. Not fixed yet. Samsung Home in the top row gets you there and back.
+- **`tools/install.sh` can stop with "timed out".** AeroTizen waits 15 seconds for the TV's reply, and a TV that is still busy with an earlier install can take longer. Running it again once the TV is idle usually works.
+- **Developer Mode refuses the connection** when your computer is on the network twice (Wi-Fi plus a cable or dock): the TV sees the cable's IP, not the one you entered. Unplug the cable, or enter that IP instead.
 
 ## Check
 
 ```sh
-node tools/screens.cjs <path-to-playwright> <out-dir>      # desktop, 1920x1080, all looks
+node tools/screens.cjs <path-to-playwright> <out-dir>      # desktop, 1920x1080: home and Control Center
 aerotizen --tv <tv-ip> inspect TvHome0001.Home             # then, in another shell:
 node tools/tv-check.mjs <out-dir>                           # on the TV: errors, key timing, screenshots
 ```
 
 ## Credits
 
+- Fork of [Clean TV Home for Samsung](https://github.com/thisizmsk-png/tv-home) by SaiKrishna Madavarapu, MIT.
 - `app/service/` is the Home-button watcher from AeroTizen 2.5.0 by Hamza El Alaoui, MIT (`app/service/LICENSE-AeroTizen`), with the app ID and port changed.
 - Fonts: Big Shoulders Display, Hanken Grotesk, JetBrains Mono, SIL Open Font License.
 - Fallback art: Art Institute of Chicago public-domain images, CC0.
