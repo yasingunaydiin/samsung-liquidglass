@@ -1,6 +1,6 @@
 // On-TV check through the web inspector that `aerotizen inspect TvHome0001.Home` forwards to
-// localhost:9222. Reports page errors and app state, steps through every style with remote
-// key events, and saves a real screenshot of each.
+// localhost:9222. Reports page errors and app state, times a remote key press on the home
+// screen, and saves a real screenshot.
 // Usage: node tools/tv-check.mjs <out-dir>
 import { writeFileSync } from 'node:fs';
 import { join } from 'node:path';
@@ -43,28 +43,22 @@ console.log('state', JSON.stringify(await evaluate(`({
   tmdb: TH.art.live, tizen: !!window.tizen, ua: navigator.userAgent.slice(0, 120)
 })`)));
 
-const styles = ['marquee', 'shelf', 'wall', 'cast'];
-const start = await evaluate('document.body.className');
-for (let i = 0; i < styles.length; i++) {
-  await press('up', 8); await press('left', 6); await press('right', i); await press('enter');
-  await press('down');
-  await sleep(1600);
-  const t0 = Date.now();
-  await press('right');
-  const lag = Date.now() - t0;
-  await sleep(900);
-  // Smoothness while idle on this style: frames drawn in 3 s and frames that took over 50 ms.
-  const frames = (await send('Runtime.evaluate', { awaitPromise: true, returnByValue: true, expression: `new Promise(r => {
-    let n = 0, slow = 0, last = performance.now(); const end = last + 3000;
-    (function tick(t) { n++; if (t - last > 50) slow++; last = t; t < end ? requestAnimationFrame(tick) : r({ n, slow }); })(last);
-  })` })).result?.result?.value;
-  const heap = (await send('Performance.getMetrics')).result?.metrics?.find((m) => m.name === 'JSHeapUsedSize')?.value;
-  const shot = await send('Page.captureScreenshot', { format: 'jpeg', quality: 70 });
-  if (shot.result?.data) writeFileSync(join(out, `tv-real-${i + 1}-${styles[i]}.jpg`), Buffer.from(shot.result.data, 'base64'));
-  console.log(styles[i], 'body:', await evaluate('document.body.className'), 'key round trip ms:', lag, 'fps:', frames && Math.round(frames.n / 3), 'slow frames:', frames && frames.slow, 'heap MB:', heap && (heap / 1048576).toFixed(1), shot.result ? 'shot ok' : 'shot failed ' + JSON.stringify(shot.error));
-}
-// Leave the TV on the style it started with.
-const back = styles.indexOf((start || '').replace('style-', '').split(' ')[0]);
-await press('up', 8); await press('left', 6); await press('right', Math.max(0, back)); await press('enter'); await press('down');
+// Measure the home screen: key response, smoothness while idle, memory, and a screenshot.
+await press('down');
+await sleep(1600);
+const t0 = Date.now();
+await press('right');
+const lag = Date.now() - t0;
+await press('left');
+await sleep(900);
+// Frames drawn in 3 s and frames that took over 50 ms.
+const frames = (await send('Runtime.evaluate', { awaitPromise: true, returnByValue: true, expression: `new Promise(r => {
+  let n = 0, slow = 0, last = performance.now(); const end = last + 3000;
+  (function tick(t) { n++; if (t - last > 50) slow++; last = t; t < end ? requestAnimationFrame(tick) : r({ n, slow }); })(last);
+})` })).result?.result?.value;
+const heap = (await send('Performance.getMetrics')).result?.metrics?.find((m) => m.name === 'JSHeapUsedSize')?.value;
+const shot = await send('Page.captureScreenshot', { format: 'jpeg', quality: 70 });
+if (shot.result?.data) writeFileSync(join(out, 'tv-real-home.jpg'), Buffer.from(shot.result.data, 'base64'));
+console.log('home', 'key round trip ms:', lag, 'fps:', frames && Math.round(frames.n / 3), 'slow frames:', frames && frames.slow, 'heap MB:', heap && (heap / 1048576).toFixed(1), shot.result ? 'shot ok' : 'shot failed ' + JSON.stringify(shot.error));
 console.log(problems.length ? problems.join('\n') : 'no page errors');
 ws.close();

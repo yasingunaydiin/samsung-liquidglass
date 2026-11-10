@@ -13,7 +13,15 @@
       '<path class="a1" d="M9 16.3a5 5 0 0 1 6 0"/><circle cx="12" cy="19.5" r="1.3" fill="currentColor"/>',
     inputs: '<rect x="3" y="5" width="18" height="12" rx="2"/><path d="M8 21h8M12 9v5M9.5 11.5 12 14l2.5-2.5"/>',
     settings: '<circle cx="12" cy="12" r="3.2"/><path d="M12 2.5v3M12 18.5v3M2.5 12h3M18.5 12h3M5.3 5.3l2.1 2.1' +
-      'M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>'
+      'M16.6 16.6l2.1 2.1M5.3 18.7l2.1-2.1M16.6 7.4l2.1-2.1"/>',
+    // Control Center glyphs.
+    controls: '<rect x="3" y="4.5" width="18" height="6.5" rx="3.25"/><circle cx="15.5" cy="7.75" r="1.5" fill="currentColor"/>' +
+      '<rect x="3" y="13" width="18" height="6.5" rx="3.25"/><circle cx="8.5" cy="16.25" r="1.5" fill="currentColor"/>',
+    memory: '<rect x="6" y="6" width="12" height="12" rx="2"/><rect x="9.5" y="9.5" width="5" height="5" rx="1"/>' +
+      '<path d="M9 2.5V6M15 2.5V6M9 18v3.5M15 18v3.5M2.5 9H6M2.5 15H6M18 9h3.5M18 15h3.5"/>',
+    audio: '<path d="M4 9.5h3.5L12 5.5v13l-4.5-4H4z"/><path class="wave" d="M15.5 9a4.5 4.5 0 0 1 0 6M18.5 6.5a8 8 0 0 1 0 11"/>',
+    clock: '<circle cx="12" cy="12" r="9"/><path d="M12 7.5V12l3 2"/>',
+    home: '<path d="M3.5 11 12 4l8.5 7"/><path d="M6 9.5V20h12V9.5"/>'
   };
   TH.icon = function (name) {
     return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" ' +

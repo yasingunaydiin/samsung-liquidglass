@@ -1,4 +1,5 @@
 dist/
 app/js/key.js
+app/js/me.js
 .DS_Store
 node_modules/

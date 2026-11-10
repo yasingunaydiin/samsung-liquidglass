@@ -15,6 +15,9 @@
   var INPUTS = 'tvhome.inputs.v1';
   var HIDDEN = /service|emanual|companion|dummy|widget|klyq|DclHome001|TvHome0001/i;
   var ORDER = ['netflix', 'prime video', 'youtube', 'apple tv'];
+  // Apps shown as tiles (brand keys below); HDMI devices are always shown. Other apps stay
+  // installed and the watcher still tracks them, they just get no tile.
+  var SHOWN = ['netflix', 'youtube', 'appletv'];
   // logo: a key in TH.LOGOS (logos.js, Simple Icons, CC0), drawn in fg. Prime Video's logo was withdrawn
   // from Simple Icons at Amazon's request, so it gets a typeset wordmark instead.
   var BRAND = {
@@ -56,7 +59,7 @@
     if (!tz || !tz.application) {  // desktop preview
       var demo = ['Netflix', 'Prime Video', 'YouTube', 'Apple TV'].map(function (n, i) {
         return appEntry('demo' + i, n, '');
-      });
+      }).filter(function (a) { return SHOWN.indexOf(a.key) >= 0; });
       demo.push(hdmiEntry({ type: 'HDMI', number: 1, editName: 'Fire TV' }));
       done(demo);
       return;
@@ -84,13 +87,16 @@
     }
     try {
       tz.application.getAppsInfo(function (list) {
+        var all = [];
         list.forEach(function (a) {
           if (a.show === false || !a.name || HIDDEN.test(a.id)) { return; }
           if (!/^[A-Za-z0-9]{10}$/.test(a.packageId || '') && !STORE_IDS[a.id]) { return; }
-          apps.push(appEntry(a.id, a.name, a.iconPath));
+          all.push(appEntry(a.id, a.name, a.iconPath));
         });
+        // The watcher gets every app, so it still stands aside for one opened elsewhere.
+        TH.tell('/apps?ids=' + all.map(function (a) { return encodeURIComponent(a.storeId || a.id); }).join(','));
+        all.forEach(function (a) { if (SHOWN.indexOf(a.key) >= 0) { apps.push(a); } });
         apps.sort(function (a, b) { return rank(a.name) - rank(b.name) || a.name.localeCompare(b.name); });
-        TH.tell('/apps?ids=' + apps.map(function (a) { return encodeURIComponent(a.storeId || a.id); }).join(','));
         withInputs();
       }, withInputs);
     } catch (e) { withInputs(); }
@@ -155,6 +161,43 @@
         tz.systeminfo.getPropertyValue('WIFI_NETWORK', function (w) { done(w.signalStrength); }, function () { done(null); });
       }, function () { done(null); });
     } catch (e) { done(null); }
+  };
+
+  // Network for the Control Center: { type: 'WIFI' | 'ETHERNET' | 'NONE' | ..., ssid, strength }.
+  TH.network = function (done) {
+    if (!tz || !tz.systeminfo) { return done({ type: 'WIFI', ssid: 'Home Wi-Fi', strength: 0.8 }); }
+    try {
+      tz.systeminfo.getPropertyValue('NETWORK', function (n) {
+        if (n.networkType !== 'WIFI') { return done({ type: n.networkType }); }
+        tz.systeminfo.getPropertyValue('WIFI_NETWORK', function (w) {
+          done({ type: 'WIFI', ssid: w.ssid, strength: w.signalStrength });
+        }, function () { done({ type: 'WIFI' }); });
+      }, function () { done({ type: 'UNKNOWN' }); });
+    } catch (e) { done({ type: 'UNKNOWN' }); }
+  };
+
+  // Share of the TV's memory in use, 0..1, or null if the TV doesn't say.
+  TH.memory = function () {
+    if (!tz || !tz.systeminfo) { return { used: 0.42 }; }  // desktop preview
+    try {
+      var total = tz.systeminfo.getTotalMemory(), free = tz.systeminfo.getAvailableMemory();
+      return total > 0 ? { used: Math.min(1, Math.max(0, 1 - free / total)) } : null;
+    } catch (e) { return null; }
+  };
+
+  // TV volume and mute (needs the tv.audio privilege in config.xml).
+  var demoMuted = false;
+  TH.audio = {
+    read: function () {
+      if (!tz) { return { volume: 18, muted: demoMuted }; }  // desktop preview
+      try { return { volume: tz.tvaudiocontrol.getVolume(), muted: tz.tvaudiocontrol.isMute() }; }
+      catch (e) { return null; }
+    },
+    toggleMute: function () {
+      if (!tz) { demoMuted = !demoMuted; return; }
+      try { tz.tvaudiocontrol.setMute(!tz.tvaudiocontrol.isMute()); }
+      catch (e) { TH.toast('Could not change the sound'); }
+    }
   };
 
   var watchingInput = false;

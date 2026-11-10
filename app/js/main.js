@@ -4,30 +4,26 @@
 
   var KEY = TH.KEY, el = TH.el;
   var PREFS = 'tvhome.prefs.v1';
-  var prefs = TH.load(PREFS, { style: 'marquee', app: 0 });
-  var st = { entries: [], style: prefs.style, row: 1, col: 0, app: 0, item: 0 };
+  var prefs = TH.load(PREFS, { app: 0 });
+  var st = { entries: [], style: 'glass', row: 1, col: 0, app: 0, item: 0 };
   var header = [];  // { label, run }
 
-  function style() { return TH.styles[st.style] || TH.styles.marquee; }
+  function style() { return TH.styles.glass; }
   function rows() { return [header.length].concat(style().rows(st)); }
 
   function buildHeader() {
     var nav = document.getElementById('header');
     nav.innerHTML = '';
-    header = TH.styleOrder.map(function (key, i) {
-      return { label: (i + 1) + ' ' + TH.styles[key].name, key: key, run: function () { setStyle(key); } };
-    });
-    header.push({ label: 'Samsung Home', run: TH.openSamsungHome });
+    header = [{ label: 'Samsung Home', run: TH.openSamsungHome }];
     header.forEach(function (h) { h.node = nav.appendChild(el('span', 'hbtn', h.label)); });
-    // Inputs and Settings sit by the clock as icons, after a Wi-Fi strength indicator.
+    // By the clock: a Wi-Fi strength indicator, then the Control Center button
+    // (Inputs, Settings and the rest live in the panel it opens).
     var status = document.getElementById('status');
     status.innerHTML = '<span class="wifi">' + TH.icon('wifi') + '</span>';
-    ['inputs', 'settings'].forEach(function (which) {
-      var h = { key: null, run: function () { TH.openSystem(which); } };
-      h.node = status.appendChild(el('span', 'ibtn'));
-      h.node.innerHTML = TH.icon(which);
-      header.push(h);
-    });
+    var controls = { key: null, run: function () { TH.panel.open(); } };
+    controls.node = status.appendChild(el('span', 'ibtn'));
+    controls.node.innerHTML = TH.icon('controls');
+    header.push(controls);
   }
 
   function paintWifi() {
@@ -39,21 +35,18 @@
   }
 
   function paintHeader() {
+    // The top row stays hidden until the remote goes up to it.
+    document.body.classList.toggle('at-top', st.row === 0);
     header.forEach(function (h, i) {
       h.node.classList.toggle('on', st.row === 0 && i === st.col);
-      h.node.classList.toggle('sel', h.key === st.style);
     });
   }
 
   function build() {
     var stage = document.getElementById('stage');
     stage.innerHTML = '';
-    document.getElementById('wall').innerHTML = '';
-    document.getElementById('field').style.backgroundColor = '';
     document.body.className = 'style-' + st.style;
-    if (st.style === 'wall' || st.style === 'cast') { TH.hideArt(); }
     style().build(st, stage);
-    document.getElementById('credit').textContent = TH.art.credit();
     render();
   }
 
@@ -61,16 +54,9 @@
     var r = rows();
     st.row = Math.max(0, Math.min(st.row, r.length - 1));
     st.col = Math.max(0, Math.min(st.col, r[st.row] - 1));
-    if (st.row === 1 && st.style !== 'cast') { st.app = st.col; }
+    if (st.row === 1) { st.app = st.col; }
     paintHeader();
     style().focus(st);
-  }
-
-  function setStyle(key) {
-    st.style = key;
-    prefs.style = key;
-    TH.save(PREFS, prefs);
-    build();
   }
 
   function move(dRow, dCol) {
@@ -80,14 +66,13 @@
       if (next < 0 || next >= r.length) { return; }
       st.row = next;
       // Keep the column on the selected app when coming back to the app row.
-      if (st.row === 1 && st.style !== 'cast') { st.col = st.app; }
-      else if (st.row === 0) { st.col = TH.styleOrder.indexOf(st.style); }
-      else if (st.style === 'shelf' && st.row === 2) { st.col = 0; }
+      if (st.row === 1) { st.col = st.app; }
+      else if (st.row === 0) { st.col = 0; }
     } else {
       st.col += dCol;
       if (st.col < 0 || st.col >= r[st.row]) { st.col -= dCol; return; }
     }
-    if (st.row === 1 && st.style !== 'cast') { st.item = 0; }
+    if (st.row === 1) { st.item = 0; }
     prefs.app = st.app;
     TH.save(PREFS, prefs);
     render();
@@ -118,6 +103,8 @@
     document.body.classList.remove('idle');
     idleTimer = setTimeout(showIdle, IDLE_MS);
   }
+  // The Control Center's "Clock screen" opens it straight away.
+  TH.idleNow = function () { clearTimeout(idleTimer); showIdle(); };
 
   document.addEventListener('keydown', function (e) {
     var k = e.keyCode;
@@ -126,6 +113,10 @@
     if (wasIdle) { e.preventDefault(); return; }  // the first key only wakes the screen
     if (TH.watchingInput()) {
       if (k === KEY.BACK || k === KEY.ESC) { e.preventDefault(); TH.leaveInput(); }
+      return;
+    }
+    if (TH.panel.isOpen()) {
+      if (TH.panel.key(k)) { e.preventDefault(); }
       return;
     }
     if (k === KEY.LEFT) { move(0, -1); }
@@ -154,7 +145,7 @@
 
   // Every 20 s the art moves on to the next trending title for the focused app.
   setInterval(function () {
-    if (document.hidden || st.style === 'wall' || st.style === 'cast' || (st.style === 'shelf' && st.row === 2)) { return; }
+    if (document.hidden) { return; }
     st.item = (st.item + 1) % 8;
     style().focus(st);
   }, 20000);

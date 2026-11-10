@@ -31,7 +31,6 @@
     ['lilies', 'Water Lilies', 'Claude Monet, 1906'],
     ['pond', 'Water Lily Pond', 'Claude Monet, 1900']
   ];
-  var FALLBACK_CAST = { name: 'Vincent van Gogh', character: '', note: 'Self-Portrait, 1887', profile: 'art/selfie.jpg' };
 
   var data = TH.load(CACHE, null);
   var art = TH.art = { live: !!KEY };
@@ -133,20 +132,6 @@
   // Fetch each app's first backdrop ahead of time so moving across tiles shows art at once.
   art.preload = function (entries) {
     entries.forEach(function (e, i) { new Image().src = art.items(e, i)[0].backdrop; });
-  };
-
-  // Lead cast member of a title, for the Cast style.
-  art.cast = function (item, done) {
-    if (!KEY || !item.id) { return done(FALLBACK_CAST); }
-    if (item.cast) { return done(item.cast); }
-    get('/' + item.media + '/' + item.id + '/credits', function (res) {
-      var people = ((res && res.cast) || []).filter(function (p) { return p.profile_path; });
-      if (!people.length) { return done(null); }
-      var p = people[0];
-      item.cast = { name: p.name, character: p.character || '', profile: IMG + 'w500' + p.profile_path };
-      TH.save(CACHE, data);
-      done(item.cast);
-    });
   };
 
   art.credit = function () {
