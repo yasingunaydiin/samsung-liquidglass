@@ -38,13 +38,6 @@ body.input > *:not(#hdmi):not(#toast) { visibility: hidden; }
 .status .wifi[data-bars="2"] .a3, .status .wifi[data-bars="1"] .a3, .status .wifi[data-bars="1"] .a2, .status .wifi[data-bars="0"] path { opacity: .25; }
 .status .wifi[data-bars="1"], .status .wifi[data-bars="0"] { color: var(--amber); }
 
-.idle { position: absolute; inset: 0; z-index: 30; display: flex; flex-direction: column; justify-content: flex-end; gap: 14px; padding: 0 96px 120px; background: var(--ink) center / cover no-repeat; opacity: 0; visibility: hidden; transition: opacity .6s ease, visibility .6s; }
-.idle::before { content: ""; position: absolute; inset: 0; background: radial-gradient(ellipse at 30% 60%, rgba(8,9,11,.55), rgba(8,9,11,.88)); }
-.idle > * { position: relative; }
-body.idle .idle { opacity: 1; visibility: visible; }
-.idle b { font: 800 300px/.8 var(--display); }
-.idle span { font-size: 34px; color: rgba(241,239,233,.8); }
-.idle small { margin-top: 18px; font: 500 20px/1 var(--mono); letter-spacing: .14em; text-transform: uppercase; color: var(--amber); }
 
 .clock { position: absolute; right: 330px; top: 46px; z-index: 5; text-align: right; display: flex; flex-direction: column; text-shadow: 0 2px 12px rgba(0,0,0,.5); }
 .clock b { font: 600 40px/1.1 var(--body); font-variant-numeric: tabular-nums; }
@@ -106,6 +99,12 @@ body.idle .idle { opacity: 1; visibility: visible; }
 .glassdock .tile::after { inset: -7px; border-radius: 30px; box-shadow: 0 0 0 5px var(--paper); }
 .glassdock .tile.on { transform: scale(1.08); }
 .glassdock .tile .icon { border-radius: 10px; }
+
+/* Screensaver: the same screen without the dock. Opacity and transform only. */
+.glassdock { transition: opacity .6s ease; }
+.style-glass .copy { transition: transform .6s ease; }
+.style-glass.idle .glassdock, .style-glass.idle .chevron { opacity: 0; }
+.style-glass.idle .copy { transform: translateY(240px); }
 
 /* ---- Control Center (all looks) ---- */
 /* The art dims behind the panel rather than blurring: a full-screen blur is too slow on a TV chip. */

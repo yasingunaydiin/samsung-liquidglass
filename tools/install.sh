@@ -19,5 +19,11 @@ if [ -s "$KEYFILE" ]; then
 else
   echo "TMDB key: none, using stand-in paintings"
 fi
+# A personal app icon, if you keep one at ~/.config/tv-home/icon.png, replaces app/icon.png
+# in the build only, so it never ends up in the repo.
+if [ -s "$HOME/.config/tv-home/icon.png" ]; then
+  cp "$HOME/.config/tv-home/icon.png" "$ROOT/dist/app/icon.png"
+  echo "Icon: your own from ~/.config/tv-home/icon.png"
+fi
 "$AEROTIZEN" --tv "$TV" install "$ROOT/dist/app"
 "$AEROTIZEN" --tv "$TV" launch TvHome0001.Home

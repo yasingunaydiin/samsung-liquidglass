@@ -17,7 +17,7 @@ var FRAME_HIDDEN_GRACE = 1500;  // Frame: give Art Mode time to report before re
 var APP_GRACE = 2500;
 var WATCH_STOP_GRACE = 1500;    // a watched app must stay stopped this long before it's dropped
 var WATCH_COVER_GRACE = 10000;  // an app the launcher opened may take this long to cover it
-var UNSEEN_SCAN = 5000;         // same pace as the visible snapshot: other apps while one is unseen
+var UNSEEN_SCAN = 10000;        // same pace as the visible snapshot, which checks every installed app
 var BOOT_DELAY = 3000;
 var BOOT_FALLBACK = 15000;      // launch anyway if the TV type is still unknown
 var started = false;
@@ -289,7 +289,7 @@ function tick() {
       // The launcher stays on screen for a moment after opening an app; keep that watch until the
       // app has had time to cover it. A real return to the launcher resets it through /home.
       if (now - state.watchAt >= WATCH_COVER_GRACE) { state.watched = null; state.seen = false; resetWatchedTiming(); }
-      if (now - (state.snapAt || 0) > 5000) {
+      if (now - (state.snapAt || 0) > 10000) {  // all 22 apps at once, so not too often
         state.snapAt = now;
         snapshot(function (result) { if (valid() && (result.complete || !isFrame())) { state.running = result.running; } done(); });
       } else { done(); }
@@ -377,7 +377,7 @@ function updateMode() {
   interval = null; capabilityRetry = null; bootFallback = null; bootTimer = null;
   if (!started || !watcherEnabled()) { return; }
   bootUntil = Date.now() + BOOT_DELAY; bootDone = false;
-  interval = setInterval(tick, 300);
+  interval = setInterval(tick, 400);  // Home returns quickly; the costly all-app check stays at 10 s
   bootFallback = setTimeout(bootLaunch, BOOT_FALLBACK);
   discoverCapability();
 }

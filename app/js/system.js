@@ -14,17 +14,18 @@
   var YOUTUBE_STORE_ID = '111299001912';
   var INPUTS = 'tvhome.inputs.v1';
   var HIDDEN = /service|emanual|companion|dummy|widget|klyq|DclHome001|TvHome0001/i;
-  var ORDER = ['netflix', 'prime video', 'youtube', 'apple tv'];
+  var ORDER = ['netflix', 'prime video', 'youtube', 'apple tv', 'xbox'];
   // Apps shown as tiles (brand keys below); HDMI devices are always shown. Other apps stay
   // installed and the watcher still tracks them, they just get no tile.
-  var SHOWN = ['netflix', 'youtube', 'appletv'];
+  var SHOWN = ['netflix', 'youtube', 'appletv', 'xbox'];
   // logo: a key in TH.LOGOS (logos.js, Simple Icons, CC0), drawn in fg. Prime Video's logo was withdrawn
-  // from Simple Icons at Amazon's request, so it gets a typeset wordmark instead.
+  // from Simple Icons at Amazon's request, and Xbox's at Microsoft's, so they get typeset wordmarks instead.
   var BRAND = {
     netflix: { key: 'netflix', color: '#000000', fg: '#e50914', glow: '#e50914', logo: 'netflix' },
     'prime video': { key: 'prime', color: '#1a98ff', fg: '#ffffff', glow: '#1a98ff', wordmark: 'prime video' },
     youtube: { key: 'youtube', color: '#0f0f0f', fg: '#ff0000', glow: '#ff0000', logo: 'youtube' },
-    'apple tv': { key: 'appletv', color: '#000000', fg: '#ffffff', glow: '#f1efe9', logo: 'appletv' }
+    'apple tv': { key: 'appletv', color: '#000000', fg: '#ffffff', glow: '#f1efe9', logo: 'appletv' },
+    xbox: { key: 'xbox', color: '#107c10', fg: '#ffffff', glow: '#107c10', wordmark: 'XBOX' }
   };
   // The TV's own Settings and Source (input list) screens, found on this model with getAppsInfo.
   TH.SYSTEM_APPS = { settings: 'com.samsung.tv.coba.setting', inputs: 'org.tizen.SMSourceAPP' };
@@ -126,13 +127,8 @@
     if (entry.kind === 'samsung') { return TH.openSamsungHome(); }
     if (!tz || !tz.application) { return TH.toast('Would open ' + entry.name); }
     function failed() { TH.tell('/home'); TH.toast('Could not open ' + entry.name); }
-    if (entry.storeId === YOUTUBE_STORE_ID) {
-      // YouTube never reports itself on screen, so the watcher must stand down first.
-      TH.tell('/leave', function () {
-        try { tz.application.launch(entry.id, null, failed); } catch (e) { failed(); }
-      }, failed);
-      return;
-    }
+    // Every app is watched, YouTube included: on the CU7172 (Tizen 9) YouTube reports itself
+    // on screen, so Home pressed in it is caught like in any other app.
     TH.tell('/watch?id=' + encodeURIComponent(entry.storeId || entry.id));
     try { tz.application.launch(entry.id, null, failed); } catch (e) { failed(); }
   };
@@ -232,6 +228,29 @@
       }, function () { TH.toast('Could not switch input'); }, 'MAIN');
     } catch (e) { TH.toast('Could not switch input'); }
   }
+  // The TV's connected inputs for the Control Center's list: [{ name, sub, source }].
+  // Samsung's own input screen doesn't open from a web app on Tizen 9, so the list is built here.
+  TH.inputs = function (done) {
+    if (!tz || !tz.systeminfo) {  // desktop preview
+      return done([{ name: 'Fire TV', sub: 'HDMI 1', source: null }, { name: 'TV', sub: 'Antenna', source: null }]);
+    }
+    try {
+      tz.systeminfo.getPropertyValue('VIDEOSOURCE', function (info) {
+        // A device that is off shows as disconnected; list it anyway, since switching can wake it (CEC).
+        function item(s, on) {
+          var port = s.type + (s.number ? ' ' + s.number : '');
+          return { name: s.editName || (s.type === 'TV' ? 'TV' : port),
+            sub: s.type === 'TV' ? 'Antenna / cable' : s.editName ? port + (on ? '' : ' · off') : on ? 'Connected' : 'Nothing on', source: s };
+        }
+        done((info.connected || []).map(function (s) { return item(s, true); })
+          .concat((info.disconnected || []).filter(function (s) { return s.type === 'HDMI'; }).map(function (s) { return item(s, false); })));
+      }, function () { done([]); });
+    } catch (e) { done([]); }
+  };
+  TH.switchInput = function (input) {
+    if (!input.source) { return TH.toast('Would switch to ' + input.name); }
+    switchTo({ name: input.name }, input.source);
+  };
   TH.watchingInput = function () { return watchingInput; };
   TH.leaveInput = function () {
     watchingInput = false;

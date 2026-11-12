@@ -14,10 +14,9 @@
   function buildHeader() {
     var nav = document.getElementById('header');
     nav.innerHTML = '';
-    header = [{ label: 'Samsung Home', run: TH.openSamsungHome }];
-    header.forEach(function (h) { h.node = nav.appendChild(el('span', 'hbtn', h.label)); });
-    // By the clock: a Wi-Fi strength indicator, then the Control Center button
-    // (Inputs, Settings and the rest live in the panel it opens).
+    // The top row is just the Control Center button (Samsung Home, Inputs, Settings and the
+    // rest live in the panel it opens), next to a Wi-Fi strength indicator.
+    header = [];
     var status = document.getElementById('status');
     status.innerHTML = '<span class="wifi">' + TH.icon('wifi') + '</span>';
     var controls = { key: null, run: function () { TH.panel.open(); } };
@@ -84,19 +83,15 @@
     if (entry) { TH.launch(entry); }
   }
 
-  // ---- idle clock: after 3 minutes without a key, a big clock over the current show ----
+  // ---- screensaver: after 3 minutes without a key, the home screen without its dock ----
+  // The clock stays and the art keeps changing every 20 s (see below); only the dock and the
+  // top row fade out, and the show's title moves down into the dock's place.
   var IDLE_MS = 180000, idleTimer = 0;
   function showIdle() {
     if (document.hidden || TH.watchingInput() || !st.entries.length) { return resetIdle(); }
-    var box = document.getElementById('idle'), entry = st.entries[st.app];
-    var items = TH.art.items(entry, st.app), it = items[st.item % items.length], now = new Date();
-    box.style.backgroundImage = 'url("' + it.backdrop + '")';
-    box.children[0].textContent = now.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }).replace(/\s?[AP]M$/i, '');
-    box.children[1].textContent = now.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric' });
-    box.children[2].textContent = (TH.art.live ? 'Trending on ' : '') + entry.name + ' · ' + it.title;
+    TH.panel.close();
+    st.row = 1; st.col = st.app; render();
     document.body.classList.add('idle');
-    // Next show and the time every 30 s while idle.
-    idleTimer = setTimeout(function () { st.item = (st.item + 1) % 8; showIdle(); }, 30000);
   }
   function resetIdle() {
     clearTimeout(idleTimer);
